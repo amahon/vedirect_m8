@@ -333,6 +333,7 @@ class Vedirect:
         self.bytes_sum = 0
         self.state = self.WAIT_HEADER
         self.dict = {}
+        self._com.ser.reset_input_buffer()
 
     def input_read(self, byte) -> Optional[dict]:
         """Input read from byte."""
