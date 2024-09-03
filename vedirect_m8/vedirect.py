@@ -333,6 +333,7 @@ class Vedirect:
         self.bytes_sum = 0
         self.state = self.WAIT_HEADER
         self.dict = {}
+        self._com.ser.reset_input_buffer()
 
     def input_read(self, byte) -> Optional[dict]:
         """Input read from byte."""
@@ -399,6 +400,15 @@ class Vedirect:
                 f"Serial input read error on byte : {byte}"
             ) from ex
 
+    def input_read_multi(self, bytes) -> Optional[dict]:
+        bytesList = [bytes[i:i+1] for i in range(len(bytes))]
+        for byte in bytesList:
+            packet = self.input_read(byte)
+            if packet is not None:
+                return packet
+        return None
+
+
     def get_serial_packet(self) -> Optional[dict]:
         """
         Return Ve Direct block packet from serial reader.
@@ -410,6 +420,19 @@ class Vedirect:
         """
         byte = self._com.ser.read(1)
         return self.input_read(byte)
+
+    def get_serial_packet_multi(self) -> Optional[dict]:
+        """
+        Return Ve Direct block packet from serial reader.
+
+        Read up to 4096 bytes from serial and decode him with vedirect protocol.
+        :return:
+            A dict of vedirect block data
+            or None if block not entirely decoded.
+        """
+        byte = self._com.ser.read(4096)
+        return self.input_read_multi(byte)
+
 
     def read_global_packet(self, timeout: int = 60) -> Optional[dict]:
         """
@@ -489,9 +512,10 @@ class Vedirect:
         result = False
         run, now, tim, i = True, time.time(), 0, 0
         if self.is_ready():
+            self.init_data_read()
             while run:
                 tim = time.time()
-                packet = self.get_serial_packet()
+                packet = self.get_serial_packet_multi()
 
                 if packet is not None:
                     logger.debug(
